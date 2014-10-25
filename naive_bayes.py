@@ -1,39 +1,46 @@
-from __future__ import division 
-#Ethan Hart
-#Movie Review
-#NLP HW 3, NAIVE BAYES
+#!/usr/bin/env python
+# encoding: utf-8
 
-#NOTE! For this program, all the training a did worked perfectly,
-#however the test set files were formatted slightly differently
-#(a \n after each sentence).  I did NOT modify my code in any way,
-#but to ensure that i functioned properly, I had to write a script
-#to remove all \n from the test data files
+"""
+A simple Naive Bayes text classifier
 
-import os, glob
+Author: Ethan Hart
+v0.1 - 2011
+curr - 2014
+"""
+
 from sets import Set
-import math
 from sys import argv
+import os
+import math
+import glob
+import argparse
 
-#this function opens group of files and creates 
-#a dictionary with words as key and count as value  
 
-def loadStopList(list):
-    #stoplist = open("/Users/ejhart/Documents/stoplist.txt", "r")
+__author__ = "Ethan Hart"
+
+
+def loadStopList():
+    """
+    Open stoplist file and return list of stoplist words
+    """
+
     stoplist = open("stoplist.txt", "r")
-    list = [] 
     for i in stoplist:
         i = i.strip()
         list.append(i)
     return list
-        
-stopList = []       
-stopList = loadStopList(stopList)
-    
-#function that iterates through a path directory, text files
-#and adds each word to the dictionary, where the dictionary 
-#key = word and the value = count of the word
+
+
+#stopList = loadStopList()
+
+
 def loadReviews(filePath):
-    #list = []
+    """
+    Given a directory, read all files and add each word to the dictionary
+    where the dictionary key = word and value = count of the word
+    """
+
     dict = {}
     path = filePath
     listing = os.listdir(path)
@@ -46,43 +53,50 @@ def loadReviews(filePath):
                 words = line.split(' ')
                 for word in words:
                     dict[word] = dict.get(word,0) + 1
-                    #list.append(word)
     return dict
-    
-#function that removes all entries in the dictionary
-#that match a word in the Stop List
 
-#NOTE! This function is not employed- the stop list only
-#hurt my results during original testing on training data
+
 def remStopWords(stoplist, dictionary):
+    """
+    Remove stopword entries from dictionary
+
+    NOTE! This function is not employed- the stop list only hurt my results
+    during original testing on training data
+    """
+
     for i in stoplist:
         if i in dictionary:
-            del dictionary[i]   
-            
-                        
-#posReview = "/Users/ejhart/Downloads/moviedata/pos/" 
-posReview = "txt_sentoken/pos/" 
-#negReview = "/Users/ejhart/Downloads/moviedata/neg/"
-negReview = "txt_sentoken/neg/" 
-    
+            del dictionary[i]
+
+
+posReview = "txt_sentoken/pos/"
+negReview = "txt_sentoken/neg/"
+
 testPos = loadReviews(posReview)
 testNeg = loadReviews(negReview)
 
 
-#adds one to the value of every entry in the dictionary
-#for laplace smoothing
 def laplacePre(dictionary):
+    """
+    Adds one to the value of every entry in the
+    dictionary for laplace smoothing
+    """
+
     for i in dictionary:
-        dictionary[i] += 1 
+        dictionary[i] += 1
+
 
 #adds one for each entry in dictionary in prep
 #for 0 count entries to be added with count = 1
 laplacePre(testPos)
 laplacePre(testNeg)
 
-#adds 0 count entries into other dictionary
-#with a count of 1
+
 def addZeroEnts(dict1, dict2):
+    """
+    Adds 0 count entries into other dictionary with a count of 1
+    """
+
     for keys in dict1:
         if keys not in dict2:
             dict2[keys] = 1
@@ -90,68 +104,75 @@ def addZeroEnts(dict1, dict2):
 addZeroEnts(testPos, testNeg)
 addZeroEnts(testNeg, testPos)
 
-#conditional prob = (word count/total words in class)
-#this conditional probability becomes the new value
-#of the dictionary key
 def conditProb(dictionary):
+    """
+    conditional prob = (word count/total words in class)
+    This conditional probability becomes the new value of the dictionary key
+    """
+
     probDict = {}
     total = sum([i for i in dictionary.values()])
     for item in dictionary:
-        conProb = dictionary[item]/total
+        conProb = dictionary[item] / float(total)
         conProb = math.log(conProb)
         probDict[item] = conProb
     return probDict
-        
+
 
 probDictPos = conditProb(testPos)
 probDictNeg = conditProb(testNeg)
 
 outFile = open("naiveBayesOutput.txt", "w")
 
-#function reads in a single file, looks word by word, and keeps two scores
-#one score for negative, one postitive.  The score is the addition of the 
-#values of the keys (these are logs, so they are added) that match the word 
-#in the new file.  Finally, the higher score is determined between postive
-#or negative. If it is positive, it will return filename +. 
+
 def probDetermine(file):
+    """
+    Given a single file, look word by word and keeps two scores: onenegative,
+    one postitive. The score is the addition of the values of the keys (these
+    are logs, so they are added) that match the word in the new file. Finally,
+    the higher score is determined between postive or negative. If it is
+    positive, it will return filename +.
+    """
+
     poscount=0
     fileName = file
     #print fileName
-    #lines = open(file).read().replace('\n', '') 
+    #lines = open(file).read().replace('\n', '')
     file = open(file, 'r')
-    lines = file.readlines()
+    #lines = file.readlines()
+    lines = file.read()
+    words = lines.split()
     #print len(lines)
     countPos = 0
     countNeg = 0
-    #print len(lines)
-    for line in lines:
-        words = line.split(' ')
+    #for line in lines:
+        #words = line.split(' ')
         #words = line.rstrip('\n')
-        for word in words:
-            if word in probDictPos:
-                print 'POS: ', probDictPos[word]
-                countPos = countPos + probDictPos[word]
-            if word in probDictNeg:
-                print 'NEG: ', probDictNeg[word]
-                countNeg = countNeg + probDictNeg[word]
+    for word in words:
+        if word in probDictPos:
+            #print 'POS: ', probDictPos[word]
+            countPos = countPos + probDictPos[word]
+        if word in probDictNeg:
+            #print 'NEG: ', probDictNeg[word]
+            countNeg = countNeg + probDictNeg[word]
         #print countPos
         #print countNeg
-        if (countPos) > (countNeg):
-            posMatch = fileName + "+"
-            print posMatch
-            poscount = poscount+1 #SEE NOTE BELOW
-            outFile.write(posMatch)
-            outFile.write('\n')
-        else:
-            negMatch = fileName + "-"
-            print negMatch
-            outFile.write(negMatch)
-            outFile.write('\n')
-    return poscount
+    if (countPos) > (countNeg):
+        result = fileName + "+"
+        #print posMatch
+        poscount = poscount+1 #SEE NOTE BELOW
+        #outFile.write(posMatch)
+        #outFile.write('\n')
+    else:
+        result = fileName + "-"
+        #print negMatch
+        #outFile.write(negMatch)
+        #outFile.write('\n')
+    return result
     #return poscount is a simple metric that I can total
     #for all files analyzed so I can determine what percentage
     #of files I looked at were positive
-    
+
 
 #posTest = "/Users/ejhart/Downloads/moviedata/testpos/"
 #negTest = "/Users/ejhart/Downloads/moviedata/testneg/"
@@ -162,25 +183,29 @@ def probDetermine(file):
 foo = "moviedata/finalTest/"
 
 
-#loops through all the files in the test set, and feeds them to the 
+#loops through all the files in the test set, and feeds them to the
 #function that determines pos or neg
-#Again, the poscount is a simple tool for me to keep score 
+#Again, the poscount is a simple tool for me to keep score
 #when training and testing
+
 test_file = argv[1]
 print probDetermine(test_file)
-poscount = 0
-for subdir, dirs, files in os.walk(foo):
-    for file in files:
-        test = len(files)
-        f = foo + file
-        x = probDetermine(f)
-        #print x
-        poscount = poscount+x
+#poscount = 0
+#for subdir, dirs, files in os.walk(foo):
+    #for file in files:
+        #test = len(files)
+        #f = foo + file
+        #x = probDetermine(f)
+        #poscount = poscount+x
 
 #print test #make sure total # of files is correct
 #print poscount #number of positive files found
 #print poscount/test #gives me a percentage of pos files/total files
 
-    
+
+#def main():
+    #test_file = argv[1]
 
 
+#if __name__ == "__main__":
+    #main()
