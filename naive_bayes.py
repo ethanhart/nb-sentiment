@@ -20,7 +20,7 @@ import argparse
 __author__ = "Ethan Hart"
 
 
-def loadStopList():
+def load_stop_words():
     """
     Open stoplist file and return list of stoplist words
     """
@@ -33,10 +33,9 @@ def loadStopList():
     return stop_words
 
 
-#stopList = loadStopList()
+stop_words = load_stop_words()
 
-
-def loadReviews(filePath):
+def get_word_counts(filePath, stop_words=[]):
     """
     Given a directory, read all files and add each word to the dictionary
     where the dictionary key = word and value = count of the word
@@ -44,56 +43,30 @@ def loadReviews(filePath):
 
     word_dict = {}
     path = filePath
-    listing = os.listdir(path)
     for subdir, dirs, files in os.walk(path):
         for fname in files:
             fp = path + fname
-            inf = open(fp, 'r')
-            lines = inf.readlines()
-            for line in lines:
-                words = line.split(' ')
-                for word in words:
-                    word_dict[word] = word_dict.get(word,0) + 1
+            with open(fp, 'r') as inf:
+                words = inf.read().strip()
+                for word in words.split():
+                    if word not in stop_words:  # replaces "remStopWords" function
+                        word_dict[word] = word_dict.get(word, 0) + 1
+
+    # Laplace smoothing preparation
+    # 0 count entries will eventually get count of 1
+    for w in word_dict:
+        word_dict[w] += 1
+
     return word_dict
 
 
-def remStopWords(stoplist, dictionary):
-    """
-    Remove stopword entries from dictionary
-
-    NOTE! This function is not employed- the stop list only hurt my results
-    during original testing on training data
-    """
-
-    for i in stoplist:
-        if i in dictionary:
-            del dictionary[i]
+pos_review = "txt_sentoken/pos/"
+neg_review = "txt_sentoken/neg/"
+test_pos = get_word_counts(pos_review, stop_words)
+test_neg = get_word_counts(neg_review, stop_words)
 
 
-posReview = "txt_sentoken/pos/"
-negReview = "txt_sentoken/neg/"
-
-testPos = loadReviews(posReview)
-testNeg = loadReviews(negReview)
-
-
-def laplacePre(dictionary):
-    """
-    Adds one to the value of every entry in the
-    dictionary for laplace smoothing
-    """
-
-    for i in dictionary:
-        dictionary[i] += 1
-
-
-#adds one for each entry in dictionary in prep
-#for 0 count entries to be added with count = 1
-laplacePre(testPos)
-laplacePre(testNeg)
-
-
-def addZeroEnts(dict1, dict2):
+def add_zero_ents(dict1, dict2):
     """
     Adds 0 count entries into other dictionary with a count of 1
     """
@@ -102,73 +75,55 @@ def addZeroEnts(dict1, dict2):
         if keys not in dict2:
             dict2[keys] = 1
 
-addZeroEnts(testPos, testNeg)
-addZeroEnts(testNeg, testPos)
+add_zero_ents(test_pos, test_neg)
+add_zero_ents(test_neg, test_pos)
 
-def conditProb(dictionary):
+
+def condit_prob(dictionary):
     """
     conditional prob = (word count/total words in class)
     This conditional probability becomes the new value of the dictionary key
     """
 
-    probDict = {}
+    prob_dict = {}
     total = sum([i for i in dictionary.values()])
     for item in dictionary:
-        conProb = dictionary[item] / float(total)
-        conProb = math.log(conProb)
-        probDict[item] = conProb
-    return probDict
+        con_prob = dictionary[item] / float(total)
+        log_con_prob = math.log(con_prob)
+        prob_dict[item] = log_con_prob
+    return prob_dict
 
 
-probDictPos = conditProb(testPos)
-probDictNeg = conditProb(testNeg)
-
-outFile = open("naiveBayesOutput.txt", "w")
+prob_dict_pos = condit_prob(test_pos)
+prob_dict_neg = condit_prob(test_neg)
 
 
-def probDetermine(test_file):
+def prob_determine(test_file):
     """
-    Given a single file, look word by word and keeps two scores: onenegative,
-    one postitive. The score is the addition of the values of the keys (these
-    are logs, so they are added) that match the word in the new file. Finally,
-    the higher score is determined between postive or negative. If it is
-    positive, it will return filename +.
+    Given a single file, look word by word and keeps two scores: one negative,
+    one postitive. The score is the addition of the values (probabilties) of
+    the keys (these are logs, so they are added) that match the word in the new
+    file. Finally, the higher score is determined between postive or negative.
+    If it is positive, it will return filename +, else -.
     """
 
     poscount=0
     fileName = test_file
-    #print fileName
-    #lines = open(file).read().replace('\n', '')
     tf = open(test_file, 'r')
-    #lines = file.readlines()
     lines = tf.read()
     words = lines.split()
-    #print len(lines)
     countPos = 0
     countNeg = 0
-    #for line in lines:
-        #words = line.split(' ')
-        #words = line.rstrip('\n')
     for word in words:
-        if word in probDictPos:
-            #print 'POS: ', probDictPos[word]
-            countPos = countPos + probDictPos[word]
-        if word in probDictNeg:
-            #print 'NEG: ', probDictNeg[word]
-            countNeg = countNeg + probDictNeg[word]
-        #print countPos
-        #print countNeg
+        if word in prob_dict_pos:
+            countPos = countPos + prob_dict_pos[word]
+        if word in prob_dict_neg:
+            countNeg = countNeg + prob_dict_neg[word]
     if (countPos) > (countNeg):
         result = fileName + "+"
-        #print posMatch
         poscount = poscount+1 #SEE NOTE BELOW
-        #outFile.write(posMatch)
-        #outFile.write('\n')
     else:
         result = fileName + "-"
-        #print negMatch
-        #outFile.write(negMatch)
-        #outFile.write('\n')
     return result
     #return poscount is a simple metric that I can total
     #for all files analyzed so I can determine what percentage
@@ -190,13 +145,13 @@ foo = "moviedata/finalTest/"
 #when training and testing
 
 test_file = argv[1]
-print probDetermine(test_file)
+print prob_determine(test_file)
 #poscount = 0
 #for subdir, dirs, files in os.walk(foo):
     #for file in files:
         #test = len(files)
         #f = foo + file
-        #x = probDetermine(f)
+        #x = prob_determine(f)
         #poscount = poscount+x
 
 #print test #make sure total # of files is correct
