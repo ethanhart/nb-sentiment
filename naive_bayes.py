@@ -49,7 +49,7 @@ def get_word_counts(filePath, stop_words=[]):
             with open(fp, 'r') as inf:
                 words = inf.read().strip()
                 for word in words.split():
-                    if word not in stop_words:  # replaces "remStopWords" function
+                    if word not in stop_words and word.isalpha():  # replaces "remStopWords" function
                         word_dict[word] = word_dict.get(word, 0) + 1
 
     # Laplace smoothing preparation
@@ -112,18 +112,23 @@ def prob_determine(test_file):
     tf = open(test_file, 'r')
     lines = tf.read()
     words = lines.split()
-    countPos = 0
-    countNeg = 0
+    count_pos = 0
+    count_neg = 0
     for word in words:
         if word in prob_dict_pos:
-            countPos = countPos + prob_dict_pos[word]
+            count_pos += prob_dict_pos[word]
         if word in prob_dict_neg:
-            countNeg = countNeg + prob_dict_neg[word]
-    if (countPos) > (countNeg):
+            count_neg += prob_dict_neg[word]
+    if (count_pos) > (count_neg):
+        prob = 1 - (count_pos / (count_pos + count_neg))
         result = fileName + "+"
         poscount = poscount+1 #SEE NOTE BELOW
     else:
+        prob = 1 - (count_neg / (count_pos + count_neg))
         result = fileName + "-"
+    print "pos: ", count_pos
+    print "neg: ", count_neg
+    print prob
     return result
     #return poscount is a simple metric that I can total
     #for all files analyzed so I can determine what percentage
