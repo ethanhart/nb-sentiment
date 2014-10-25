@@ -25,11 +25,12 @@ def loadStopList():
     Open stoplist file and return list of stoplist words
     """
 
+    stop_words = []
     stoplist = open("stoplist.txt", "r")
     for i in stoplist:
         i = i.strip()
-        list.append(i)
-    return list
+        stop_words.append(i)
+    return stop_words
 
 
 #stopList = loadStopList()
@@ -41,19 +42,19 @@ def loadReviews(filePath):
     where the dictionary key = word and value = count of the word
     """
 
-    dict = {}
+    word_dict = {}
     path = filePath
     listing = os.listdir(path)
     for subdir, dirs, files in os.walk(path):
-        for file in files:
-            file = path + file
-            f = open(file, 'r')
-            lines = f.readlines()
+        for fname in files:
+            fp = path + fname
+            inf = open(fp, 'r')
+            lines = inf.readlines()
             for line in lines:
                 words = line.split(' ')
                 for word in words:
-                    dict[word] = dict.get(word,0) + 1
-    return dict
+                    word_dict[word] = word_dict.get(word,0) + 1
+    return word_dict
 
 
 def remStopWords(stoplist, dictionary):
@@ -125,7 +126,7 @@ probDictNeg = conditProb(testNeg)
 outFile = open("naiveBayesOutput.txt", "w")
 
 
-def probDetermine(file):
+def probDetermine(test_file):
     """
     Given a single file, look word by word and keeps two scores: onenegative,
     one postitive. The score is the addition of the values of the keys (these
@@ -135,12 +136,12 @@ def probDetermine(file):
     """
 
     poscount=0
-    fileName = file
+    fileName = test_file
     #print fileName
     #lines = open(file).read().replace('\n', '')
-    file = open(file, 'r')
+    tf = open(test_file, 'r')
     #lines = file.readlines()
-    lines = file.read()
+    lines = tf.read()
     words = lines.split()
     #print len(lines)
     countPos = 0
